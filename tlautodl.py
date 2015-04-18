@@ -1,9 +1,10 @@
 __author__ = 'legacy'
 import socket
 import string
-
-nickname = "nickname_here"
-realname = "realname_here"
+import re
+# Enter nickname and realname, so the server can identify you
+nickname = "GG"
+realname = "GG"
 
 host = "irc.torrentleech.org"
 port = 7011
@@ -21,9 +22,19 @@ while 1:
 
     for line in temp:
         print line
+        # Check if this is an announce, test will be a value if it is
+        # Regex parser
+        test = re.search("<(.*)\s::\s(.*)>\s*Name:'(.*)'\suploaded\sby\s'*(.*)'.*(http.*)", line)
+        if test:
+            category = test.group(1)
+            subcategory = test.group(2)
+            name = test.group(3)
+            uploader = test.group(4)
+            link = test.group(5)
 
         line = line.split(" ")
+        # This will reply back to the server if it sends out a PING
         if line[0] == "PING" :
             socket.send("PONG %s\r\n" % line[1])
         if line[1] == "001":
-            socket.send("JOIN #torrentleech\r\n"))
+            socket.send("JOIN #tlannounces\r\n")
