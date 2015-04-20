@@ -30,7 +30,7 @@ def reading_lines():
 
 def download_torrent(regex):
         session = requests.Session()
-        response = session.get("%s%s/%s/%s.torrent" % (URL, regex.torrentid, cfg.rsskey, regex.name), headers=cfg.headers, stream=True)
+        response = session.get("%s%s/%s/%s.torrent" % (URL, torrentid, cfg.rsskey, name), headers=cfg.headers, stream=True)
         with open("%s%s.torrent" % (cfg.directory, name), 'wb') as torrent_file:
             torrent_file.write(response.content)
 
