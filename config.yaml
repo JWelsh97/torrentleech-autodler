@@ -6,12 +6,18 @@ irc_details:
     announce_channel: "#tlannounces"
 
 download:
-    directory: ""
+    directory: "/home/jack/Downloads/"
     rsskey: ""
 
+tlinfo:
+    cookies:
+        tluid: ""
+        tlpass: ""
+
+# Enter filters
 filters:
      TV:
-         match: [".*"]
+         match: [".*"] # Separate words with \W* e.g. ["The\W*Flash*"]
          subcategory: ["Episodes HD"]
      Movies:
          match: [".*"]
