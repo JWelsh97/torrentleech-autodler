@@ -87,7 +87,7 @@ def ratio_checker():
         ratio = float(ratio.group(1))
     return ratio
 
-ratio_checker()
+ratio = ratio_checker()
 
 while 1:
 
