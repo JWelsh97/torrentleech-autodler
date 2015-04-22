@@ -7,7 +7,6 @@ import yaml
 
 URL = "http://torrentleech.org/rss/download/"
 
-
 def read_config():
     '''
     Reads the YAML config file
@@ -23,6 +22,7 @@ filters = config["filters"]
 irc = config["irc_details"]
 headers = config["headers"]
 torrent = config["download"]
+tlinfo = config["tlinfo"]
 
 
 def connect(irc_address, port, nickname, realname):
@@ -37,7 +37,6 @@ def connect(irc_address, port, nickname, realname):
     return new_socket
 
 new_socket = connect(irc["address"], irc["port"], irc["nickname"], irc["realname"])
-
 
 def reading_lines():
     '''
@@ -74,12 +73,29 @@ def must_download(name, category, subcategory, torrentid):
                 if re.search(regex, name):
                     download_torrent(torrentid, name)
 
+
+def ratio_checker():
+    '''
+    Uses cookies and the post requests to find ratio,
+    ratio is parsed.
+    '''
+    url_login = "http://torrentleech.org"
+    new_session = requests.Session()
+    r = new_session.post(url_login, headers, cookies=tlinfo["cookies"])
+    ratio = re.search(r'Ratio:\s</span>(\d+\.\d+)', r.text)
+    if ratio:
+        ratio = float(ratio.group(1))
+    return ratio
+
+ratio_checker()
+
 while 1:
 
     temp = reading_lines()
 
     for line in temp:
         print line.replace("\r", "")
+        # Regex Parser
         regex = re.search("<(.*)\s::\s(.*)>\s*Name:'(.*)'\suploaded\sby\s'*(.*)'.*(http.*).*torrent/(.*)", line)
 
         if regex:
@@ -89,7 +105,8 @@ while 1:
             uploader = regex.group(4)
             link = regex.group(5)
             torrentid = regex.group(6)
-            must_download(name, category, subcategory, torrentid)
+            if ratio > 0.6:
+                must_download(name, category, subcategory, torrentid)
 
         # This will reply back to the server if it sends out a PING)
         line = line.split(" ")
