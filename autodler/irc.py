@@ -6,6 +6,7 @@ from yaml import load
 import threading
 from re import search
 
+
 class Config():
     def __init__(self, location):
         self.location = location
@@ -149,7 +150,6 @@ class IRC():
                 if welcome:
                     self._socket.send("JOIN %s\r\n" % self.announce_channel)
                     print('JOIN %s' % self.announce_channel)
-
 
 
 class Snatch():

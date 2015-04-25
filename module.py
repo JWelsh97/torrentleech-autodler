@@ -1,6 +1,6 @@
 __author__ = 'jack'
 
-from devautodler import Config, IRC
+from autodler.irc import Config, IRC
 
 # Read config
 config = Config("config.yaml")
