@@ -102,22 +102,30 @@ class IRC():
         Also takes the nickname and realname of your bot
         """
         new_socket = socket.socket()
-        new_socket.connect((self.address, self.port))
-        new_socket.send("NICK %s\r\n" % self.nickname)
-        new_socket.send("USER %s 0 * : %s\r\n" % (self.nickname, self.realname))
-        self.connected = True
+
+        try:
+            new_socket.connect((self.address, self.port))
+            new_socket.send("NICK %s\r\n" % self.nickname)
+            new_socket.send("USER %s 0 * : %s\r\n" % (self.nickname, self.realname))
+            self.connected = True
+        except socket.error as e:
+            print e.strerror
+
         return new_socket
 
     def _reading_lines(self):
         """
         Reads the lines that the server gives the bot
         """
-        readbuffer = self._socket.recv(2048)
-        lines = readbuffer.split('\n')
+        if self.connected:
+            readbuffer = self._socket.recv(2048)
+            lines = readbuffer.split('\n')
+        else:
+            lines = ''
         return lines
 
     def client(self):
-        while True:
+        while self.connected:
             for line in self._reading_lines():
                 print line.replace("\r", "")
                 welcome = search(':.*\s(001).*', line)
@@ -137,6 +145,7 @@ class IRC():
                 if welcome:
                     self._socket.send("JOIN %s\r\n" % self.announce_channel)
                     print('JOIN %s' % self.announce_channel)
+
 
 
 class Snatch():
