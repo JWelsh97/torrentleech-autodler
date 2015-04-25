@@ -3,7 +3,6 @@ __author__ = 'legacy'
 import socket
 import requests
 from yaml import load
-import string
 import threading
 from re import search
 
@@ -82,13 +81,20 @@ class Config():
 
 class IRC():
     def __init__(self, address, port, nickname, realname, announce_channel):
+        # IRC Data
         self.address = address
         self.port = port
         self.nickname = nickname
         self.realname = realname
         self.announce_channel = announce_channel
-        self._new_socket = self._connect()
-        self.temp = self._reading_lines()
+
+        # Connection status, updated by self.client
+        self.connected = False
+
+        # Create a socket
+        self._socket = self._connect()
+        self.__t = threading.Thread(target=self.client)
+        self.__t.start()
 
     def _connect(self):
         """
@@ -99,38 +105,38 @@ class IRC():
         new_socket.connect((self.address, self.port))
         new_socket.send("NICK %s\r\n" % self.nickname)
         new_socket.send("USER %s 0 * : %s\r\n" % (self.nickname, self.realname))
+        self.connected = True
         return new_socket
 
     def _reading_lines(self):
         """
-        Reads the lines that the server gives the bot,
-        places them in temp
+        Reads the lines that the server gives the bot
         """
-        readbuffer = ""
-        readbuffer = readbuffer + self._new_socket.recv(2048)
-        temp = string.split(readbuffer, "\n")
-        readbuffer = temp.pop()
-        return temp
+        readbuffer = self._socket.recv(2048)
+        lines = readbuffer.split('\n')
+        return lines
 
     def client(self):
-        while 1:
-            for line in self.temp:
+        while True:
+            for line in self._reading_lines():
                 print line.replace("\r", "")
-                line = str(line.split(" "))
-                result = search("^:(.*)!(.*)@(.*)\s(.*)\s(.*)\s:(.*)$", line)
-                if result:
-                    nickname = result.group(1)
-                    realname = result.group(2)
-                    ip = result.group(3)
-                    message_type = result.group(4)
-                    destination = result.group(5)
-                    message = result.group(6)
+                welcome = search(':.*\s(001).*', line)
+                msg = search("^:(.*)!(.*)@(.*)\s(.*)\s(.*)\s:(.*)$", line)
+                if msg:
+                    nickname = msg.group(1)
+                    realname = msg.group(2)
+                    ip = msg.group(3)
+                    message_type = msg.group(4)
+                    destination = msg.group(5)
+                    message = msg.group(6)
                 ping = search("^PING\s:(.*)$", line)
                 if ping:
                     ping_code = ping.group(1)
-                    self._new_socket.send("PONG %s\r\n" % ping_code)
-                if line[1] == "001":
-                    self._new_socket.send("JOIN %s\r\n" % self.announce_channel)
+                    self._socket.send("PONG %s\r\n" % ping_code)
+                    print("PONG %s" % ping_code)
+                if welcome:
+                    self._socket.send("JOIN %s\r\n" % self.announce_channel)
+                    print('JOIN %s' % self.announce_channel)
 
 
 class Snatch():
