@@ -88,7 +88,7 @@ class IRC():
         self.realname = realname
         self.announce_channel = announce_channel
 
-        # Connection status, updated by self.client
+        # Connection status, updated by self._connect
         self.connected = False
 
         # Create a socket
