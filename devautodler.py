@@ -118,8 +118,12 @@ class IRC():
         Reads the lines that the server gives the bot
         """
         if self.connected:
-            readbuffer = self._socket.recv(2048)
-            lines = readbuffer.split('\n')
+            try:
+                readbuffer = self._socket.recv(2048)
+                lines = readbuffer.split('\n')
+            except:
+                self.connected = False
+                lines = ''
         else:
             lines = ''
         return lines
