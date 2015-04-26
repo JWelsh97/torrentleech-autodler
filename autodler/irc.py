@@ -4,6 +4,7 @@ import socket
 from yaml import load
 import threading
 from re import search
+from web import *
 
 
 class Config():
@@ -13,6 +14,47 @@ class Config():
 
     def __str__(self):
         return self._raw_config.__str__()
+
+    @property
+    def cookies(self):
+        if "tlinfo" in self._raw_config:
+            if self._raw_config["tlinfo"]["cookies"] != "":
+                return self._raw_config['tlinfo']['cookies']
+            else:
+                return None
+
+    @property
+    def headers(self):
+        if 'headers' in self._raw_config:
+            if self._raw_config['headers'] != '':
+                return self._raw_config['headers']
+            else:
+                return {'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:37.0) Gecko/20100101 Firefox/37.0',
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                        'Accept-Encoding': 'gzip, deflate',
+                        'Accept-Language': 'en-GB,en;q=0.5',
+                        'Connection': 'keep-alive'}
+
+    @property
+    def rsskey(self):
+        if 'tlinfo' in self._raw_config:
+            if 'rsskey' in self._raw_config['tlinfo']:
+                if self._raw_config['tlinfo']['rsskey'] != '':
+                    return self._raw_config['tlinfo']['rsskey']
+
+    @property
+    def download_dir(self):
+        if 'download_dir' in self._raw_config:
+            if self._raw_config['download_dir'] != '':
+                return self._raw_config['download_dir']
+        return '/tmp'
+
+    @property
+    def min_ratio(self):
+        if 'tlinfo' in self._raw_config:
+            if 'min_ratio' in self._raw_config['tlinfo']:
+                return self._raw_config['tlinfo']['min_ratio']
+        return 0.6
 
     @property
     def irc_address(self):
@@ -81,6 +123,9 @@ class Config():
 
 class IRC():
     def __init__(self, config):
+        # Store config
+        self.config = config
+
         # IRC Data
         self.address = config.irc_address
         self.port = config.irc_port
@@ -139,6 +184,22 @@ class IRC():
 
                 if line.type == 'PRIVMSG':
                     print(line.message)
+                    announce = search("<(.*)\s::\s(.*)>\s*Name:'(.*)'\suploaded\sby\s'\s*(.*)'.*http.*torrent/(.*)", line)
+                    if announce:
+                        category = announce.group(1)
+                        subcategory = announce.group(2)
+                        name = announce.group(3)
+                        uploader = announce.group(4)
+                        torrentid = announce.group(5).replace("\r", "")
+                        ratio = get_ratio(self.config.headers, self.config.cookies)
+                        if in_filter(category, subcategory, self.config.filters, name):
+                            if ratio > self.config.min_ratio:
+                                download_torrent(torrentid, name,
+                                                 self.config.headers,
+                                                 self.config.rsskey,
+                                                 self.config.download_dir,
+                                                 self.config.cookies)
+
                 elif line.type == 'PING':
                     self._socket.send("PONG %s\r\n" % line.message)
                     print("PONG %s" % line.message)
