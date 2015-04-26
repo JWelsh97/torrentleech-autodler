@@ -1,7 +1,6 @@
 __author__ = 'legacy'
 
 import socket
-import requests
 from yaml import load
 import threading
 from re import search
@@ -81,13 +80,13 @@ class Config():
 
 
 class IRC():
-    def __init__(self, address, port, nickname, realname, announce_channel):
+    def __init__(self, config):
         # IRC Data
-        self.address = address
-        self.port = port
-        self.nickname = nickname
-        self.realname = realname
-        self.announce_channel = announce_channel
+        self.address = config.irc_address
+        self.port = config.irc_port
+        self.nickname = config.irc_nickname
+        self.realname = config.irc_realname
+        self.announce_channel = config.irc_announce_channel
 
         # Connection status, updated by self._connect
         self.connected = False
@@ -114,39 +113,93 @@ class IRC():
 
         return new_socket
 
-    def _reading_lines(self):
+    def _read_lines(self):
         """
         Reads the lines that the server gives the bot
+        :rtype Message
         """
+        readbuffer = ''
         if self.connected:
             try:
                 readbuffer = self._socket.recv(2048)
-                lines = readbuffer.split('\n')
             except:
                 self.connected = False
-                lines = ''
-        else:
-            lines = ''
-        return lines
+
+        result = []
+        for line in readbuffer.split('\n'):
+            if line != '':
+                result.append(Message(line))
+
+        return result
 
     def client(self):
         while self.connected:
-            for line in self._reading_lines():
-                print line.replace("\r", "")
-                welcome = search(':.*\s(001).*', line)
-                msg = search("^:(.*)!(.*)@(.*)\s(.*)\s(.*)\s:(.*)$", line)
-                if msg:
-                    nickname = msg.group(1)
-                    realname = msg.group(2)
-                    ip = msg.group(3)
-                    message_type = msg.group(4)
-                    destination = msg.group(5)
-                    message = msg.group(6)
-                ping = search("^PING\s:(.*)$", line)
-                if ping:
-                    ping_code = ping.group(1)
-                    self._socket.send("PONG %s\r\n" % ping_code)
-                    print("PONG %s" % ping_code)
-                if welcome:
+            for line in self._read_lines():
+                print(line.message)
+
+                if line.type == 'PRIVMSG':
+                    print(line.message)
+                elif line.type == 'PING':
+                    self._socket.send("PONG %s\r\n" % line.message)
+                    print("PONG %s" % line.message)
+                elif line.type == '001':
                     self._socket.send("JOIN %s\r\n" % self.announce_channel)
                     print('JOIN %s' % self.announce_channel)
+
+
+class Message():
+    def __init__(self, buffer):
+        self.buffer = buffer.replace('\r', '')
+        self._code = search(':.*\s(\d{3})\s(.*)', self.buffer)
+        self._msg = search("^:(.*)!(.*)@(.*)\s(.*)\s(.*)\s:(.*)$", self.buffer)
+        self._ping = search("^PING\s:(.*)$", self.buffer)
+
+    @property
+    def nickname(self):
+        if self._msg:
+            return self._msg.group(1)
+        else:
+            return None
+
+    @property
+    def realname(self):
+        if self._msg:
+            return self._msg.group(2)
+        else:
+            return None
+
+    @property
+    def address(self):
+        if self._msg:
+            return self._msg.group(3)
+        else:
+            return None
+
+    @property
+    def type(self):
+        if self._ping:
+            return 'PING'
+        elif self._code:
+            return self._code.group(1)
+        elif self._msg:
+            return self._msg.group(4)
+        else:
+            return None
+
+    @property
+    def destination(self):
+        if self._msg:
+            return self._msg.group(5)
+        else:
+            return None
+
+    @property
+    def message(self):
+        if self._ping:
+            return self._ping.group(1)
+        elif self._code:
+            return self._code.group(2)
+        elif self._msg:
+            return self._msg.group(6)
+        else:
+            return self.buffer
