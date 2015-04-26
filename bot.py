@@ -6,8 +6,4 @@ from autodler.irc import Config, IRC
 config = Config("config.yaml")
 
 # Connect to IRC
-irc = IRC(config.irc_address,
-          config.irc_port,
-          config.irc_nickname,
-          config.irc_realname,
-          config.irc_announce_channel)
+irc = IRC(config)
