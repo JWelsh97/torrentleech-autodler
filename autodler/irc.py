@@ -173,7 +173,7 @@ class IRC():
 
         if self.connected:
             try:
-                self.__readbuffer += self._socket.recv(2)
+                self.__readbuffer += self._socket.recv(2048)
             except:
                 self.connected = False
 
