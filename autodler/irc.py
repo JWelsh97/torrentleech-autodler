@@ -57,6 +57,13 @@ class Config():
         return 0.6
 
     @property
+    def filters(self):
+        if 'filters' in self._raw_config:
+            return self._raw_config['filters']
+        else:
+            return {}
+
+    @property
     def irc_address(self):
         """
         Return the IRC server address
@@ -138,6 +145,7 @@ class IRC():
 
         # Create a socket
         self._socket = self._connect()
+        self.__readbuffer = ''
         self.__t = threading.Thread(target=self.client)
         self.__t.start()
 
@@ -163,17 +171,23 @@ class IRC():
         Reads the lines that the server gives the bot
         :rtype Message
         """
-        readbuffer = ''
+
         if self.connected:
             try:
-                readbuffer = self._socket.recv(2048)
+                self.__readbuffer += self._socket.recv(2048)
             except:
                 self.connected = False
 
         result = []
-        for line in readbuffer.split('\n'):
-            if line != '':
+        lines = self.__readbuffer.split('\r\n')
+
+        if len(lines) > 0:
+            for line in lines[:-1]:
                 result.append(Message(line))
+
+            self.__readbuffer = lines.pop()
+        else:
+            self.__readbuffer = ''
 
         return result
 
@@ -183,8 +197,7 @@ class IRC():
                 print(line.message)
 
                 if line.type == 'PRIVMSG':
-                    print(line.message)
-                    announce = search("<(.*)\s::\s(.*)>\s*Name:'(.*)'\suploaded\sby\s'\s*(.*)'.*http.*torrent/(.*)", line)
+                    announce = search(r"<(.*)\s::\s(.*)>\s*Name:'(.*)'\suploaded\sby\s'\s*(.*)'.*http.*torrent/(.*)", line.message)
                     if announce:
                         category = announce.group(1)
                         subcategory = announce.group(2)
@@ -212,7 +225,7 @@ class Message():
     def __init__(self, buffer):
         self.buffer = buffer.replace('\r', '')
         self._code = search(':.*\s(\d{3})\s(.*)', self.buffer)
-        self._msg = search("^:(.*)!(.*)@(.*)\s(.*)\s(.*)\s:(.*)$", self.buffer)
+        self._msg = search("^:(.*)!(.*)@([\w\.]*)\s([\w]*)\s([\#\w]*)\s:(.*)$", self.buffer)
         self._ping = search("^PING\s:(.*)$", self.buffer)
 
     @property
