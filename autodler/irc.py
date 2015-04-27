@@ -3,7 +3,6 @@ __author__ = 'legacy'
 import socket
 from yaml import load
 import threading
-from re import search
 from web import *
 
 
@@ -174,19 +173,19 @@ class IRC():
 
         if self.connected:
             try:
-                self.__readbuffer += self._socket.recv(2048)
+                self.__readbuffer += self._socket.recv(2)
             except:
                 self.connected = False
 
         result = []
         lines = self.__readbuffer.split('\r\n')
 
-        if len(lines) > 0:
-            for line in lines[:-1]:
-                result.append(Message(line))
-
-            self.__readbuffer = lines.pop()
-        else:
+        # Wait until there is at least one full line before
+        # iterating over the list
+        if len(lines) > 0 and lines[-1] == '':
+            for line in lines:
+                if line != '':
+                    result.append(Message(line))
             self.__readbuffer = ''
 
         return result
